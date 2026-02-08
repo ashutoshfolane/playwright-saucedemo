@@ -1,7 +1,7 @@
 {
   "name": "playwright-saucedemo",
   "version": "1.0.0",
-  "description": "",
+  "description": "Test automation framework for saucedemo application using playwright",
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
