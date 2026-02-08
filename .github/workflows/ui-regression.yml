@@ -1,0 +1,35 @@
+name: UI Regression (Playwright Nightly)
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 9:00 AM UTC daily = 1 AM PST daily
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Regression
+        run: npx playwright test --reporter=html
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-regression
+          path: playwright-report/
+          retention-days: 30
