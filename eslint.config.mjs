@@ -13,29 +13,29 @@ export default [
       "**/build/**",
       "**/.playwright/**",
       "**/playwright-report/**",
-      "**/test-results/**"
+      "**/test-results/**",
     ],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      parser: tsParser
+      parser: tsParser,
     },
     plugins: {
-      "@typescript-eslint": tsPlugin
+      "@typescript-eslint": tsPlugin,
     },
     rules: {
       "no-unused-vars": "off",
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }]
-    }
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    },
   },
 
   {
     files: ["**/*.{spec,test}.{ts,tsx,js,jsx}", "**/tests/**/*.{ts,tsx,js,jsx}"],
     plugins: { playwright },
     rules: {
-      ...playwright.configs["flat/recommended"].rules
-    }
+      ...playwright.configs["flat/recommended"].rules,
+    },
   },
 
-  prettier
+  prettier,
 ];
