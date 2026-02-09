@@ -1,8 +1,10 @@
 const SECRET_KEYS = ["PASSWORD", "TOKEN", "SECRET", "KEY"];
+
 function isSecretKey(key: string): boolean {
   const upper = key.toUpperCase();
   return SECRET_KEYS.some((s) => upper.includes(s));
 }
+
 export function redactObject(obj: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {

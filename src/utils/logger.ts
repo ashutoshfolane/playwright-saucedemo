@@ -1,4 +1,5 @@
 import { redactObject } from "./redact";
+
 export function log(message: string, meta?: Record<string, unknown>) {
   const safe = meta ? redactObject(meta) : undefined;
   const ts = new Date().toISOString();
