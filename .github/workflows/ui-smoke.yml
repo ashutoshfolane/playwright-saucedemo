@@ -12,6 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
+    # CI uses staging only (no env files committed)
+    env:
+      ENV: staging
+      BASE_URL: https://www.saucedemo.com
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
+
     steps:
       - uses: actions/checkout@v4
 
