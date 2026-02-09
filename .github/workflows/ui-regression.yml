@@ -45,6 +45,9 @@ jobs:
       - name: Prepare blob output dir
         run: rm -rf blob-report && mkdir -p blob-report
 
+      - name: Lint (no warnings)
+        run: npm run lint:strict
+
       - name: Run Regression (sharded, blob report)
         run: |
           export PLAYWRIGHT_BLOB_OUTPUT_DIR="blob-report"
