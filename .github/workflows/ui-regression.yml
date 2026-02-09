@@ -13,7 +13,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: ["1/3", "2/3", "3/3"]
+        include:
+          - shard: "1/3"
+            shard_name: "1-of-3"
+          - shard: "2/3"
+            shard_name: "2-of-3"
+          - shard: "3/3"
+            shard_name: "3-of-3"
 
     env:
       ENV: staging
@@ -36,6 +42,9 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      - name: Prepare blob output dir
+        run: rm -rf blob-report && mkdir -p blob-report
+
       - name: Run Regression (sharded, blob report)
         run: |
           export PLAYWRIGHT_BLOB_OUTPUT_DIR="blob-report"
@@ -45,9 +54,9 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: blob-report-${{ matrix.shard }}
+          name: blob-report-${{ matrix.shard_name }}
           path: blob-report/
-          retention-days: 7
+          retention-days: 14
 
   merge_report:
     runs-on: ubuntu-latest
@@ -73,6 +82,11 @@ jobs:
           path: blob-report
           merge-multiple: true
 
+      - name: Verify blob reports exist
+        run: |
+          ls -la blob-report
+          test -n "$(ls -A blob-report)" || (echo "No blob reports found to merge" && exit 1)
+
       - name: Merge reports (single HTML)
         run: npm run report:merge:html
 
@@ -82,4 +96,4 @@ jobs:
         with:
           name: playwright-report-regression-merged
           path: playwright-report/
-          retention-days: 30
+          retention-days: 14
