@@ -1,18 +1,18 @@
 import { test, expect } from "@playwright/test";
 
-test("@smoke has title", async ({ page }) => {
-  await page.goto("https://playwright.dev/");
-
-  // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/Playwright/);
+test("@smoke loads saucedemo login page", async ({ page }) => {
+  await page.goto("/"); // uses baseURL from env
+  await expect(page).toHaveTitle(/Swag Labs/);
+  await expect(page.locator(".login_logo")).toHaveText("Swag Labs");
 });
 
-test("@regression get started link", async ({ page }) => {
-  await page.goto("https://playwright.dev/");
+test("@regression login page shows expected UI", async ({ page }) => {
+  await page.goto("/");
 
-  // Click the get started link.
-  await page.getByRole("link", { name: "Get started" }).click();
+  await expect(page).toHaveTitle(/Swag Labs/);
+  await expect(page.locator(".login_logo")).toHaveText("Swag Labs");
 
-  // Expects page to have a heading with the name of Installation.
-  await expect(page.getByRole("heading", { name: "Installation" })).toBeVisible();
+  await expect(page.locator('[data-test="username"]')).toBeVisible();
+  await expect(page.locator('[data-test="password"]')).toBeVisible();
+  await expect(page.locator('[data-test="login-button"]')).toBeVisible();
 });
