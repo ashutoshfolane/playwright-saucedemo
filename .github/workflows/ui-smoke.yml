@@ -32,6 +32,9 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      - name: Lint (no warnings)
+        run: npm run lint:strict
+
       - name: Run Smoke
         run: npm run test:smoke
 
