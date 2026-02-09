@@ -34,7 +34,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Smoke
-        run: npx playwright test -g "@smoke" --reporter=html
+        run: npm run test:smoke
 
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
