@@ -12,7 +12,7 @@ export function redactObject(obj: Record<string, unknown>): Record<string, unkno
       out[k] = "***REDACTED***";
       continue;
     }
-    // redact nested objects (but keep arrays as-is unless you want deeper handling)
+    // redact nested objects but not arrays
     if (v && typeof v === "object" && !Array.isArray(v)) {
       out[k] = redactObject(v as Record<string, unknown>);
     } else {
