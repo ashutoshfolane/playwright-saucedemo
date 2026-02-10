@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { makeRunId } from "../utils/runId";
 import { log } from "../utils/logger";
+import { env } from "../config/env";
 
 type Fixtures = {
   runId: string;
@@ -43,6 +44,7 @@ export const test = base.extend<Fixtures>({
     }
 
     const context = await browser.newContext({
+      baseURL: env.BASE_URL,
       storageState: auth ? statePath : undefined,
     });
 
