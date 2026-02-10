@@ -3,6 +3,7 @@ import { InventoryPage } from "../../src/pages/InventoryPage";
 import { CartPage } from "../../src/pages/CartPage";
 import { CheckoutStepOnePage } from "../../src/pages/CheckoutStepOnePage";
 import { ITEMS } from "../../src/data/factories/constants";
+import { CHECKOUT_TEST_DATA } from "../../src/data/factories/checkout.testdata";
 
 test.use({ auth: true });
 
@@ -16,7 +17,7 @@ test("@regression @checkout checkout requires first name", async ({ page }) => {
   await cart.checkout();
 
   const step1 = new CheckoutStepOnePage(page);
-  await step1.submitShipping("", "qaprefix-last", "95112");
+  await step1.submitShipping("", CHECKOUT_TEST_DATA.LAST_NAME, CHECKOUT_TEST_DATA.POSTAL_CODE);
   await expect(step1.error).toBeVisible();
 });
 
@@ -30,7 +31,7 @@ test("@regression @checkout checkout requires last name", async ({ page }) => {
   await cart.checkout();
 
   const step1 = new CheckoutStepOnePage(page);
-  await step1.submitShipping("qaprefix-first", "", "95112");
+  await step1.submitShipping(CHECKOUT_TEST_DATA.FIRST_NAME, "", CHECKOUT_TEST_DATA.POSTAL_CODE);
   await expect(step1.error).toBeVisible();
 });
 
@@ -44,6 +45,6 @@ test("@regression @checkout checkout requires postal code", async ({ page }) => 
   await cart.checkout();
 
   const step1 = new CheckoutStepOnePage(page);
-  await step1.submitShipping("qaprefix-first", "qaprefix-last", "");
+  await step1.submitShipping(CHECKOUT_TEST_DATA.FIRST_NAME, CHECKOUT_TEST_DATA.LAST_NAME, "");
   await expect(step1.error).toBeVisible();
 });
