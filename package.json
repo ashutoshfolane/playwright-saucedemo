@@ -18,8 +18,8 @@
     "report": "playwright show-report",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "lint:strict": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
+    "lint:strict": "eslint . --max-warnings=0",
     "format": "prettier . --check",
     "format:write": "prettier . --write",
     "check": "npm run lint && npm run format && npm run typecheck && npm test",
@@ -50,7 +50,10 @@
     "zod": "^4.3.6"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": "eslint --fix",
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
     "*.{json,md,yml,yaml}": "prettier --write --ignore-unknown",
     "*.{css,scss}": "prettier --write"
   }
