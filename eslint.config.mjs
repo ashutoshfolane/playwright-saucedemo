@@ -34,6 +34,18 @@ export default [
     plugins: { playwright },
     rules: {
       ...playwright.configs["flat/recommended"].rules,
+      // Our assertions live in helpers, not inline expect()
+      "playwright/expect-expect": [
+        "warn",
+        {
+          assertFunctionNames: [
+            "expectOnInventory",
+            "expectLoginErrorContains",
+            "expectCartBadge",
+            "expectCheckoutComplete",
+          ],
+        },
+      ],
     },
   },
 
