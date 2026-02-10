@@ -1,10 +1,13 @@
-````
 # Playwright SauceDemo --- Production-Grade UI Automation Framework (TypeScript)
 
 [![UI Smoke](https://github.com/ashutoshfolane/playwright-saucedemo/actions/workflows/ui-smoke.yml/badge.svg)](https://github.com/ashutoshfolane/playwright-saucedemo/actions/workflows/ui-smoke.yml)
+
 [![UI Regression Nightly](https://github.com/ashutoshfolane/playwright-saucedemo/actions/workflows/ui-regression.yml/badge.svg)](https://github.com/ashutoshfolane/playwright-saucedemo/actions/workflows/ui-regression.yml)
+
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+
 ![Node](https://img.shields.io/badge/node-22.x-blue.svg)
+
 ![Playwright](https://img.shields.io/badge/playwright-test-informational)
 
 A professional Playwright + TypeScript UI automation framework designed like a real production repo: **clean layering**, **typed env config**, **fast auth via storageState**, **CI quality gates**, **nightly sharded regression with a single merged report**, and **safe manual runs across environments**.
@@ -15,26 +18,39 @@ A professional Playwright + TypeScript UI automation framework designed like a r
 
 This framework is intentionally layered so tests stay readable and changes are isolated:
 
-1. **Tests (`tests/`)** --- Business-facing specs grouped by domain (auth/inventory/cart/checkout). Tests avoid UI plumbing and read like requirements.
-2. **Flows (`src/flows/`)** --- Reusable business actions such as `uiLogin()` and `completeCheckout()` to reduce duplication and make tests concise.
-3. **Pages (`src/pages/`)** --- Page Objects own locators and UI operations. When selectors change, you fix them in one place.
-4. **Assertions (`src/assertions/`)** --- Stable reusable expectations (ex: `expectOnInventory`, `expectCartBadge`) so tests don't repeat assertion logic.
-5. **Data factories (`src/data/factories/`)** --- Central constants and test-data generation (items/users/checkout payloads/unique ids).
-6. **Fixtures (`src/fixtures/test.ts`)** --- Shared setup: per-test `runId`, structured logging, isolated browser contexts, and optional authenticated state via `storageState`.
-7. **Env config (`src/config/env.ts`)** --- Typed env loader (`dotenv + zod`) with a **default of staging**, supporting both local `.env` files and CI secret injection.
+1\. **Tests (`tests/`)** --- Business-facing specs grouped by domain (auth/inventory/cart/checkout). Tests avoid UI plumbing and read like requirements.
+
+2\. **Flows (`src/flows/`)** --- Reusable business actions such as `uiLogin()` and `completeCheckout()` to reduce duplication and make tests concise.
+
+3\. **Pages (`src/pages/`)** --- Page Objects own locators and UI operations. When selectors change, you fix them in one place.
+
+4\. **Assertions (`src/assertions/`)** --- Stable reusable expectations (ex: `expectOnInventory`, `expectCartBadge`) so tests don't repeat assertion logic.
+
+5\. **Data factories (`src/data/factories/`)** --- Central constants and test-data generation (items/users/checkout payloads/unique ids).
+
+6\. **Fixtures (`src/fixtures/test.ts`)** --- Shared setup: per-test `runId`, structured logging, isolated browser contexts, and optional authenticated state via `storageState`.
+
+7\. **Env config (`src/config/env.ts`)** --- Typed env loader (`dotenv + zod`) with a **default of staging**, supporting both local `.env` files and CI secret injection.
 
 ---
 
 ## Tech Stack
 
 - **Test Runner**: Playwright Test
+
 - **Language**: TypeScript (Node 22)
+
 - **Config**: `dotenv` + `zod` validation
+
 - **Code Quality**: ESLint (flat config) + Prettier + Husky + lint-staged
+
 - **CI**: GitHub Actions
-  - Smoke on PR/push (staging)
-  - Nightly sharded regression + merged HTML report (staging)
-  - Manual custom workflow (dev/staging/prod) with safety guards
+
+- Smoke on PR/push (staging)
+
+- Nightly sharded regression + merged HTML report (staging)
+
+- Manual custom workflow (dev/staging/prod) with safety guards
 
 ---
 
@@ -111,7 +127,7 @@ playwright-saucedemo/
   .prettierrc
   .prettierignore
   package.json
-````
+```
 
 ---
 
