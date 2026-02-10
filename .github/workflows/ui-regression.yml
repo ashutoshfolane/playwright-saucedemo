@@ -21,9 +21,13 @@ jobs:
           - shard: "3/3"
             shard_name: "3-of-3"
 
+    # Bind this job to the GitHub Environment named "staging"
+    environment: staging
+
+    # Pull BASE_URL from environment vars and creds from environment secrets
     env:
       ENV: staging
-      BASE_URL: https://www.saucedemo.com
+      BASE_URL: ${{ vars.BASE_URL }}
       SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
       SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
       SHARD: ${{ matrix.shard }}
@@ -70,6 +74,9 @@ jobs:
     needs: regression_shards
     timeout-minutes: 30
     if: ${{ always() }}
+
+    # ✅ merge job also needs access to repo tools (no secrets required here, but harmless)
+    environment: staging
 
     steps:
       - uses: actions/checkout@v4

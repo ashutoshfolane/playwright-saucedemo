@@ -1,0 +1,170 @@
+name: UI Custom Run (Playwright)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Required: Environment to run against"
+        type: choice
+        required: true
+        default: staging
+        options:
+          - dev
+          - staging
+          - production
+
+      browser:
+        description: "Required: Browser / Playwright project"
+        type: choice
+        required: true
+        default: chromium
+        options:
+          - chromium
+          - firefox
+          - webkit
+
+      testPath:
+        description: "Optional: Run a specific test file or folder. Example: tests/checkout/checkout.happy.spec.ts or tests/auth"
+        type: string
+        required: false
+        default: ""
+
+      tags:
+        description: 'Optional: Comma-separated tags. Example: smoke,auth (will run --grep "@smoke|@auth"). Not allowed for production.'
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  custom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    # ✅ Bind to GitHub Environment (dev/staging/production)
+    environment: ${{ inputs.environment }}
+
+    # ✅ Secrets/vars come from the selected Environment
+    env:
+      ENV: ${{ inputs.environment }}
+      BASE_URL: ${{ vars.BASE_URL }}
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Lint (no warnings)
+        run: npm run lint:strict
+
+      # REQUIRED for tests that do: test.use({ auth: true })
+      - name: Generate auth storageState
+        run: npm run auth:state
+
+      - name: Validate inputs (must choose exactly one selector; production requires testPath)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ENV_INPUT="${{ inputs.environment }}"
+          TEST_PATH="${{ inputs.testPath }}"
+          TAGS="${{ inputs.tags }}"
+
+          # trim spaces
+          TEST_PATH="$(echo "$TEST_PATH" | xargs || true)"
+          TAGS="$(echo "$TAGS" | xargs || true)"
+
+          # Base rule: cannot provide both
+          if [[ -n "$TEST_PATH" && -n "$TAGS" ]]; then
+            echo "ERROR: Provide only one selector: testPath OR tags (not both)."
+            exit 1
+          fi
+
+          # Base rule: must provide one
+          if [[ -z "$TEST_PATH" && -z "$TAGS" ]]; then
+            echo "ERROR: You must provide one selector: testPath OR tags."
+            echo "Examples:"
+            echo "  testPath: tests/checkout/checkout.happy.spec.ts"
+            echo "  tags: smoke,auth"
+            exit 1
+          fi
+
+          # Production hardening: only allow testPath
+          if [[ "$ENV_INPUT" == "production" ]]; then
+            if [[ -z "$TEST_PATH" ]]; then
+              echo "ERROR: For production runs, testPath is required (tags are not allowed)."
+              echo "Example: testPath=tests/checkout/checkout.happy.spec.ts"
+              exit 1
+            fi
+            if [[ -n "$TAGS" ]]; then
+              echo "ERROR: tags are not allowed when environment=production. Use testPath."
+              exit 1
+            fi
+          fi
+
+      - name: Run custom selection
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TEST_PATH="${{ inputs.testPath }}"
+          TAGS="${{ inputs.tags }}"
+          PROJECT="${{ inputs.browser }}"
+
+          # trim spaces
+          TEST_PATH="$(echo "$TEST_PATH" | xargs || true)"
+          TAGS="$(echo "$TAGS" | xargs || true)"
+
+          echo "ENV=$ENV"
+          echo "BASE_URL=$BASE_URL"
+          echo "PROJECT=$PROJECT"
+          echo "TEST_PATH=$TEST_PATH"
+          echo "TAGS=$TAGS"
+
+          if [[ -n "$TEST_PATH" ]]; then
+            # ✅ Deterministic: run only the given file/folder
+            npx playwright test "$TEST_PATH" --project="$PROJECT" --reporter=html
+            exit 0
+          fi
+
+          # ✅ Tags mode (dev/staging only)
+          CLEAN="$(echo "$TAGS" | tr -d ' ')"
+          PATTERN=""
+
+          IFS=',' read -ra PARTS <<< "$CLEAN"
+          for t in "${PARTS[@]}"; do
+            [[ -z "$t" ]] && continue
+            [[ "$t" == @* ]] || t="@${t}"
+            if [[ -z "$PATTERN" ]]; then
+              PATTERN="$t"
+            else
+              PATTERN="${PATTERN}|${t}"
+            fi
+          done
+
+          if [[ -z "$PATTERN" ]]; then
+            echo "ERROR: tags input was provided but produced an empty pattern."
+            exit 1
+          fi
+
+          echo "Running with --grep \"$PATTERN\""
+          npx playwright test --grep "$PATTERN" --project="$PROJECT" --reporter=html
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: playwright-report-custom-${{ inputs.environment }}-${{ inputs.browser }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
