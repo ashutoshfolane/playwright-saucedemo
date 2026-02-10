@@ -75,7 +75,7 @@ jobs:
     timeout-minutes: 30
     if: ${{ always() }}
 
-    # ✅ merge job also needs access to repo tools (no secrets required here, but harmless)
+    # merge job also needs access to repo tools (no secrets required here, but harmless)
     environment: staging
 
     steps:

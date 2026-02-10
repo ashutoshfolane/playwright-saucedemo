@@ -40,10 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
-    # ✅ Bind to GitHub Environment (dev/staging/production)
+    # Bind to GitHub Environment (dev/staging/production)
     environment: ${{ inputs.environment }}
 
-    # ✅ Secrets/vars come from the selected Environment
+    # Secrets/vars come from the selected Environment
     env:
       ENV: ${{ inputs.environment }}
       BASE_URL: ${{ vars.BASE_URL }}
@@ -132,12 +132,12 @@ jobs:
           echo "TAGS=$TAGS"
 
           if [[ -n "$TEST_PATH" ]]; then
-            # ✅ Deterministic: run only the given file/folder
+            # Deterministic: run only the given file/folder
             npx playwright test "$TEST_PATH" --project="$PROJECT" --reporter=html
             exit 0
           fi
 
-          # ✅ Tags mode (dev/staging only)
+          # Tags mode (dev/staging only)
           CLEAN="$(echo "$TAGS" | tr -d ' ')"
           PATTERN=""
 
