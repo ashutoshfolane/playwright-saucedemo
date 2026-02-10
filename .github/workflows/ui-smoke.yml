@@ -35,6 +35,10 @@ jobs:
       - name: Lint (no warnings)
         run: npm run lint:strict
 
+      # REQUIRED for tests that do: test.use({ auth: true })
+      - name: Generate auth storageState
+        run: npm run auth:state
+
       - name: Run Smoke
         run: npm run test:smoke
 

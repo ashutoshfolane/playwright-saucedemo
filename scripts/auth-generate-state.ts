@@ -26,12 +26,10 @@ async function main() {
   await context.close();
   await browser.close();
 
-   
   console.log(`✅ storageState saved: ${storagePath}`);
 }
 
 main().catch((e) => {
-   
   console.error(e);
   process.exit(1);
 });
