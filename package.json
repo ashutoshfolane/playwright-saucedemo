@@ -11,7 +11,7 @@
     "test:regression:shard:blob": "playwright test --grep \"@regression\" --project=chromium --project=firefox --project=webkit --shard=$SHARD --reporter=blob",
     "report:merge:html": "playwright merge-reports --reporter=html ./blob-report",
     "test:auth": "playwright test --grep \"@auth\"",
-    "auth:state": "ts-node scripts/auth-generate-state.ts",
+    "auth:state": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/auth-generate-state.ts",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "test:debug": "PWDEBUG=1 playwright test",
