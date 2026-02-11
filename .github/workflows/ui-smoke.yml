@@ -12,10 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
-    # Bind this job to the GitHub Environment named "staging"
-    environment: staging
+    # ✅ Dependabot PRs require approval; humans do not.
+    environment: ${{ github.actor == 'dependabot[bot]' && 'staging-dependabot' || 'staging' }}
 
-    # Pull BASE_URL from environment vars and creds from environment secrets
     env:
       ENV: staging
       BASE_URL: ${{ vars.BASE_URL }}
@@ -23,12 +22,19 @@ jobs:
       SAUCE_PASSWORD: ${{ secrets.SAUCE_PASSWORD }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "npm"
+
+      - name: Validate required env inputs (no secret output)
+        shell: bash
+        run: |
+          : "${BASE_URL:?BASE_URL is missing (expected Environment variable: BASE_URL)}"
+          : "${SAUCE_USERNAME:?SAUCE_USERNAME is missing (expected Environment secret: SAUCE_USERNAME)}"
+          : "${SAUCE_PASSWORD:?SAUCE_PASSWORD is missing (expected Environment secret: SAUCE_PASSWORD)}"
 
       - name: Install dependencies
         run: npm ci
@@ -39,14 +45,14 @@ jobs:
       - name: Lint (no warnings)
         run: npm run lint:strict
 
-      # REQUIRED for tests that do: test.use({ auth: true })
+      # REQUIRED for tests that use auth=true
       - name: Generate auth storageState
         run: npm run auth:state
 
       - name: Run Smoke
         run: npm run test:smoke
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: ${{ always() }}
         with:
           name: playwright-report-smoke

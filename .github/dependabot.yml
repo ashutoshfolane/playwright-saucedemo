@@ -4,22 +4,20 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
 
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+    # ✅ One PR for all npm bumps
     groups:
-      linting:
+      all-dependencies:
         patterns:
-          - "eslint"
-          - "eslint-*"
-          - "@typescript-eslint/*"
-          - "prettier"
-      playwright:
-        patterns:
-          - "@playwright/test"
-          - "playwright"
+          - "*"
 
     ignore:
       - dependency-name: "@playwright/test"
@@ -29,13 +27,17 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
       - "github-actions"
 
-    # Group action bumps into one PR (fewer PRs/CI runs)
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+    # ✅ One PR for all action bumps
     groups:
       actions:
         patterns:
