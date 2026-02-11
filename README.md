@@ -1,4 +1,4 @@
-# Playwright SauceDemo --- Production-Grade UI Automation Framework (TypeScript)
+# Playwright SauceDemo - Production-Grade UI Automation Framework (TypeScript)
 
 [![UI Smoke](https://github.com/ashutoshfolane/playwright-saucedemo/actions/workflows/ui-smoke.yml/badge.svg)](https://github.com/ashutoshfolane/playwright-saucedemo/actions/workflows/ui-smoke.yml)
 
