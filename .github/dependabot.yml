@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # 1) NPM dependencies (package.json / package-lock.json)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -7,6 +8,35 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+
+    groups:
+      linting:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@typescript-eslint/*"
+          - "prettier"
+      playwright:
+        patterns:
+          - "@playwright/test"
+          - "playwright"
+
     ignore:
       - dependency-name: "@playwright/test"
         update-types: ["version-update:semver-major"]
+
+  # 2) GitHub Actions (workflow action versions)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+    # Group action bumps into one PR (fewer PRs/CI runs)
+    groups:
+      actions:
+        patterns:
+          - "*"
