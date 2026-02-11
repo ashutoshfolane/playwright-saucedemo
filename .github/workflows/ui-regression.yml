@@ -21,10 +21,9 @@ jobs:
           - shard: "3/3"
             shard_name: "3-of-3"
 
-    # Bind this job to the GitHub Environment named "staging"
+    # Use Environment secrets/vars for test credentials + base URL
     environment: staging
 
-    # Pull BASE_URL from environment vars and creds from environment secrets
     env:
       ENV: staging
       BASE_URL: ${{ vars.BASE_URL }}
@@ -75,8 +74,12 @@ jobs:
     timeout-minutes: 30
     if: ${{ always() }}
 
-    # merge job also needs access to repo tools (no secrets required here, but harmless)
-    environment: staging
+    # This job needs to read Actions run metadata (start/end) via GitHub API
+    permissions:
+      actions: read
+      contents: read
+
+    # Environment secrets/vars NOT needed here (only merging reports + pushing metrics)
 
     steps:
       - uses: actions/checkout@v6
@@ -111,3 +114,59 @@ jobs:
           name: playwright-report-regression-merged
           path: playwright-report/
           retention-days: 14
+
+      # ----------------------------
+      # Run-level metrics (ONLY nightly regression)
+      # Repo secrets stay as Repository secrets (not Environment secrets)
+      # ----------------------------
+      - name: Compute run-level metadata (duration/status) from GitHub API
+        id: runmeta
+        if: ${{ always() }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          json="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "${api}")"
+
+          started_at="$(node -e "const j=${json@Q}; const o=JSON.parse(j.slice(1,-1)); console.log(o.run_started_at || '')")"
+          updated_at="$(node -e "const j=${json@Q}; const o=JSON.parse(j.slice(1,-1)); console.log(o.updated_at || '')")"
+          conclusion="$(node -e "const j=${json@Q}; const o=JSON.parse(j.slice(1,-1)); console.log(o.conclusion || 'unknown')")"
+
+          # compute duration seconds (best-effort)
+          duration="$(node - <<'NODE'
+          const started = process.env.STARTED;
+          const updated = process.env.UPDATED;
+          function toMs(s){ return s ? Date.parse(s) : NaN; }
+          const ms = toMs(updated) - toMs(started);
+          const sec = Number.isFinite(ms) && ms > 0 ? Math.round(ms/1000) : 0;
+          console.log(sec);
+          NODE
+          )" STARTED="$started_at" UPDATED="$updated_at"
+
+          echo "started_at=$started_at" >> "$GITHUB_OUTPUT"
+          echo "updated_at=$updated_at" >> "$GITHUB_OUTPUT"
+          echo "conclusion=$conclusion" >> "$GITHUB_OUTPUT"
+          echo "duration_seconds=$duration" >> "$GITHUB_OUTPUT"
+
+      - name: Push run-level metrics to Grafana Cloud (OTLP HTTP)
+        if: ${{ always() }}
+        env:
+          # Repo secrets (NOT Environment secrets)
+          GRAFANA_OTLP_METRICS_URL: ${{ secrets.GRAFANA_OTLP_METRICS_URL }}
+          GRAFANA_OTLP_USERNAME: ${{ secrets.GRAFANA_OTLP_USERNAME }}
+          GRAFANA_OTLP_TOKEN: ${{ secrets.GRAFANA_OTLP_TOKEN }}
+
+          # Metadata for labels
+          METRIC_REPO: ${{ github.repository }}
+          METRIC_WORKFLOW: ${{ github.workflow }}
+          METRIC_BRANCH: ${{ github.ref_name }}
+          METRIC_RUN_ID: ${{ github.run_id }}
+          METRIC_RUN_ATTEMPT: ${{ github.run_attempt }}
+          METRIC_SHA: ${{ github.sha }}
+
+          METRIC_STATUS: ${{ steps.runmeta.outputs.conclusion }}
+          METRIC_DURATION_SECONDS: ${{ steps.runmeta.outputs.duration_seconds }}
+        run: npm run metrics:push

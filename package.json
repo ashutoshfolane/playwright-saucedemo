@@ -23,7 +23,8 @@
     "format": "prettier . --check",
     "format:write": "prettier . --write",
     "check": "npm run lint && npm run format && npm run typecheck && npm test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "metrics:push": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/metrics-push-otlp.ts"
   },
   "keywords": [],
   "author": "",
