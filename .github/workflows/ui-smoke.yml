@@ -12,8 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
-    # ✅ Dependabot PRs require approval; humans do not.
-    environment: ${{ github.actor == 'dependabot[bot]' && 'staging-dependabot' || 'staging' }}
+    # Always use staging for smoke. (Dependabot will not use secrets, see step gating.)
+    environment: staging
 
     env:
       ENV: staging
@@ -29,7 +29,20 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      # ----------------------------
+      # Dependabot PRs: SAFE GATE (no secrets)
+      # ----------------------------
+      - name: Dependabot safe gate (lint only)
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' }}
+        run: |
+          npm ci
+          npm run lint:strict
+
+      # ----------------------------
+      # Humans (and pushes): REAL SMOKE (needs secrets)
+      # ----------------------------
       - name: Validate required env inputs (no secret output)
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]') }}
         shell: bash
         run: |
           : "${BASE_URL:?BASE_URL is missing (expected Environment variable: BASE_URL)}"
@@ -37,21 +50,27 @@ jobs:
           : "${SAUCE_PASSWORD:?SAUCE_PASSWORD is missing (expected Environment secret: SAUCE_PASSWORD)}"
 
       - name: Install dependencies
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]') }}
         run: npm ci
 
       - name: Install Playwright Browsers
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]') }}
         run: npx playwright install --with-deps
 
       - name: Lint (no warnings)
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]') }}
         run: npm run lint:strict
 
-      # REQUIRED for tests that use auth=true
+      # REQUIRED for tests that do: test.use({ auth: true })
       - name: Generate auth storageState
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]') }}
         run: npm run auth:state
 
       - name: Run Smoke
+        if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]') }}
         run: npm run test:smoke
 
+      # Always upload whatever exists (lint-only runs won't have reports; that's OK)
       - uses: actions/upload-artifact@v6
         if: ${{ always() }}
         with:
