@@ -13,7 +13,7 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
 
-    # ✅ One PR for all npm bumps
+    # One PR for all npm bumps
     groups:
       all-dependencies:
         patterns:
@@ -21,6 +21,10 @@ updates:
 
     ignore:
       - dependency-name: "@playwright/test"
+        update-types: ["version-update:semver-major"]
+
+      # Prevent eslint v10+ bumps until the ecosystem supports it
+      - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
 
   # 2) GitHub Actions (workflow action versions)
@@ -37,7 +41,7 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
 
-    # ✅ One PR for all action bumps
+    # One PR for all action bumps
     groups:
       actions:
         patterns:
