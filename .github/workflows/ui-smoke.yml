@@ -70,7 +70,7 @@ jobs:
         if: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]') }}
         run: npm run test:smoke
 
-      # Always upload whatever exists (lint-only runs won't have reports)
+      # Always upload whatever exists (lint-only runs won't have reports; that's OK)
       - uses: actions/upload-artifact@v6
         if: ${{ always() }}
         with:
