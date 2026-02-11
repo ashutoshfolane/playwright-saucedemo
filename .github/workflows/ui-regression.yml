@@ -75,7 +75,7 @@ jobs:
     timeout-minutes: 30
     if: ${{ always() }}
 
-    # merge job also needs access to repo tools (no secrets required here, but harmless)
+    # If your Grafana secrets/vars live in the "staging" Environment, keep this.
     environment: staging
 
     steps:
@@ -103,6 +103,87 @@ jobs:
 
       - name: Merge reports (single HTML)
         run: npm run report:merge:html
+
+      # ----------------------------
+      # Grafana Cloud metrics (run-level) - nightly only, ONE metric per run
+      # ----------------------------
+      - name: Push run-level metrics to Grafana Cloud (nightly regression)
+        if: ${{ github.event_name == 'schedule' }}
+        env:
+          OTLP_URL: ${{ secrets.GRAFANA_OTLP_METRICS_URL }}
+          OTLP_AUTH_HEADER: ${{ secrets.GRAFANA_OTLP_AUTH_HEADER }}
+          SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+          SHARDS_RESULT: ${{ needs.regression_shards.result }}
+        shell: bash
+        run: |
+          : "${OTLP_URL:?Missing secret: GRAFANA_OTLP_METRICS_URL}"
+          : "${OTLP_AUTH_HEADER:?Missing secret: GRAFANA_OTLP_AUTH_HEADER}"
+
+          SERVICE_NAME="${SERVICE_NAME:-playwright-saucedemo}"
+          NOW_NS=$(date +%s%N)
+
+          # success | failure | cancelled
+          STATUS="${SHARDS_RESULT:-unknown}"
+
+          cat > otlp-metrics.json <<'JSON'
+          {
+            "resourceMetrics": [
+              {
+                "resource": {
+                  "attributes": [
+                    { "key": "service.name", "value": { "stringValue": "__SERVICE__" } },
+                    { "key": "repo", "value": { "stringValue": "__REPO__" } }
+                  ]
+                },
+                "scopeMetrics": [
+                  {
+                    "scope": { "name": "ui-tests" },
+                    "metrics": [
+                      {
+                        "name": "ui_run_total",
+                        "description": "Total UI nightly runs",
+                        "unit": "1",
+                        "sum": {
+                          "aggregationTemporality": 2,
+                          "isMonotonic": true,
+                          "dataPoints": [
+                            {
+                              "asInt": 1,
+                              "timeUnixNano": "__NOW_NS__",
+                              "attributes": [
+                                { "key": "workflow", "value": { "stringValue": "__WORKFLOW__" } },
+                                { "key": "job", "value": { "stringValue": "regression-nightly" } },
+                                { "key": "event", "value": { "stringValue": "__EVENT__" } },
+                                { "key": "ref", "value": { "stringValue": "__REF__" } },
+                                { "key": "status", "value": { "stringValue": "__STATUS__" } }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+          JSON
+
+          sed -i.bak \
+            -e "s|__SERVICE__|${SERVICE_NAME}|g" \
+            -e "s|__REPO__|${GITHUB_REPOSITORY}|g" \
+            -e "s|__NOW_NS__|${NOW_NS}|g" \
+            -e "s|__WORKFLOW__|${GITHUB_WORKFLOW}|g" \
+            -e "s|__EVENT__|${GITHUB_EVENT_NAME}|g" \
+            -e "s|__REF__|${GITHUB_REF_NAME}|g" \
+            -e "s|__STATUS__|${STATUS}|g" \
+            otlp-metrics.json
+
+          curl -sS -X POST \
+            -H "Content-Type: application/json" \
+            -H "$OTLP_AUTH_HEADER" \
+            "$OTLP_URL" \
+            --data-binary @otlp-metrics.json
 
       - name: Upload merged HTML report
         uses: actions/upload-artifact@v6
