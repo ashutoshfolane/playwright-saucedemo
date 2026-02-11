@@ -30,12 +30,19 @@ function required(name: EnvKey): string {
   return v;
 }
 
+function normalizeStatus(raw: string): string {
+  const s = (raw || "").trim().toLowerCase();
+  if (!s) return "unknown";
+  // GitHub run conclusions typically include: success, failure, cancelled, skipped, timed_out, action_required, stale, neutral
+  return s;
+}
+
 async function main(): Promise<void> {
   const url = required("GRAFANA_OTLP_METRICS_URL");
   const user = required("GRAFANA_OTLP_USERNAME");
   const token = required("GRAFANA_OTLP_TOKEN");
 
-  const status = required("METRIC_STATUS");
+  const status = normalizeStatus(required("METRIC_STATUS"));
   const durationSeconds = Number(process.env.METRIC_DURATION_SECONDS ?? "0");
 
   const repo = required("METRIC_REPO");
@@ -45,9 +52,10 @@ async function main(): Promise<void> {
   const runAttempt = required("METRIC_RUN_ATTEMPT");
   const sha = required("METRIC_SHA");
 
-  const nowNs = String(Date.now() * 1_000_000);
+  const nowMs = Date.now();
+  const nowNs = String(nowMs * 1_000_000);
 
-  // Low-cardinality labels
+  // Low-cardinality labels (good for dashboards)
   const attrs = [
     { key: "repo", value: { stringValue: repo } },
     { key: "workflow", value: { stringValue: workflow } },
@@ -55,7 +63,7 @@ async function main(): Promise<void> {
     { key: "status", value: { stringValue: status } },
   ];
 
-  // High-cardinality identifiers (keep/remove based on your dashboard needs)
+  // High-cardinality identifiers (use sparingly in dashboards; useful for drill-down)
   const runAttrs = [
     { key: "run_id", value: { stringValue: String(runId) } },
     { key: "run_attempt", value: { stringValue: String(runAttempt) } },
@@ -77,13 +85,16 @@ async function main(): Promise<void> {
             metrics: [
               {
                 name: "ui_regression_run_total",
-                description: "Count of UI regression workflow runs",
+                description: "Count of UI regression workflow runs (event-style)",
                 unit: "1",
                 sum: {
+                  // DELTA is best for "1 per event"; but many backends accept DELTA or CUMULATIVE.
+                  // We'll keep CUMULATIVE temporality but NON-monotonic so "1 per run" is valid.
                   aggregationTemporality: 2, // CUMULATIVE
-                  isMonotonic: true,
+                  isMonotonic: false,
                   dataPoints: [
                     {
+                      startTimeUnixNano: nowNs,
                       timeUnixNano: nowNs,
                       asInt: 1,
                       attributes: [...attrs, ...runAttrs],

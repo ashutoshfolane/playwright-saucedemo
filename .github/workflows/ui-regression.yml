@@ -74,11 +74,12 @@ jobs:
     timeout-minutes: 30
     if: ${{ always() }}
 
-    # This job needs to read Actions run metadata (start/end) via GitHub API
+    # Read Actions run metadata via GitHub API
     permissions:
       actions: read
       contents: read
 
+    # NO environment binding here (we want env secrets separate)
     # Environment secrets/vars NOT needed here (only merging reports + pushing metrics)
 
     steps:
@@ -122,34 +123,25 @@ jobs:
       - name: Compute run-level metadata (duration/status) from GitHub API
         id: runmeta
         if: ${{ always() }}
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run_id = context.runId;
 
-          json="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H "Accept: application/vnd.github+json" "${api}")"
+            const { data: run } = await github.rest.actions.getWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id,
+            });
 
-          started_at="$(node -e "const j=${json@Q}; const o=JSON.parse(j.slice(1,-1)); console.log(o.run_started_at || '')")"
-          updated_at="$(node -e "const j=${json@Q}; const o=JSON.parse(j.slice(1,-1)); console.log(o.updated_at || '')")"
-          conclusion="$(node -e "const j=${json@Q}; const o=JSON.parse(j.slice(1,-1)); console.log(o.conclusion || 'unknown')")"
+            const started = run.run_started_at ? new Date(run.run_started_at) : null;
+            const updated = run.updated_at ? new Date(run.updated_at) : null;
 
-          # compute duration seconds (best-effort)
-          duration="$(node - <<'NODE'
-          const started = process.env.STARTED;
-          const updated = process.env.UPDATED;
-          function toMs(s){ return s ? Date.parse(s) : NaN; }
-          const ms = toMs(updated) - toMs(started);
-          const sec = Number.isFinite(ms) && ms > 0 ? Math.round(ms/1000) : 0;
-          console.log(sec);
-          NODE
-          )" STARTED="$started_at" UPDATED="$updated_at"
+            const durationSeconds =
+              started && updated ? Math.max(0, Math.round((updated - started) / 1000)) : 0;
 
-          echo "started_at=$started_at" >> "$GITHUB_OUTPUT"
-          echo "updated_at=$updated_at" >> "$GITHUB_OUTPUT"
-          echo "conclusion=$conclusion" >> "$GITHUB_OUTPUT"
-          echo "duration_seconds=$duration" >> "$GITHUB_OUTPUT"
+            core.setOutput("duration_seconds", String(durationSeconds));
+            core.setOutput("status", run.conclusion || run.status || "unknown");
 
       - name: Push run-level metrics to Grafana Cloud (OTLP HTTP)
         if: ${{ always() }}
@@ -167,6 +159,6 @@ jobs:
           METRIC_RUN_ATTEMPT: ${{ github.run_attempt }}
           METRIC_SHA: ${{ github.sha }}
 
-          METRIC_STATUS: ${{ steps.runmeta.outputs.conclusion }}
+          METRIC_STATUS: ${{ steps.runmeta.outputs.status }}
           METRIC_DURATION_SECONDS: ${{ steps.runmeta.outputs.duration_seconds }}
         run: npm run metrics:push
