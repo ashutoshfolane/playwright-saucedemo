@@ -80,7 +80,6 @@ jobs:
       contents: read
 
     # NO environment binding here (we want env secrets separate)
-    # Environment secrets/vars NOT needed here (only merging reports + pushing metrics)
 
     steps:
       - uses: actions/checkout@v6
@@ -117,8 +116,7 @@ jobs:
           retention-days: 14
 
       # ----------------------------
-      # Run-level metrics (ONLY nightly regression)
-      # Repo secrets stay as Repository secrets (not Environment secrets)
+      # Run-level metadata (duration/status)
       # ----------------------------
       - name: Compute run-level metadata (duration/status) from GitHub API
         id: runmeta
@@ -143,15 +141,16 @@ jobs:
             core.setOutput("duration_seconds", String(durationSeconds));
             core.setOutput("status", run.conclusion || run.status || "unknown");
 
+      # ----------------------------
+      # Push metrics to Grafana Cloud (repo secrets only)
+      # ----------------------------
       - name: Push run-level metrics to Grafana Cloud (OTLP HTTP)
         if: ${{ always() }}
         env:
-          # Repo secrets (NOT Environment secrets)
           GRAFANA_OTLP_METRICS_URL: ${{ secrets.GRAFANA_OTLP_METRICS_URL }}
           GRAFANA_OTLP_USERNAME: ${{ secrets.GRAFANA_OTLP_USERNAME }}
           GRAFANA_OTLP_TOKEN: ${{ secrets.GRAFANA_OTLP_TOKEN }}
 
-          # Metadata for labels
           METRIC_REPO: ${{ github.repository }}
           METRIC_WORKFLOW: ${{ github.workflow }}
           METRIC_BRANCH: ${{ github.ref_name }}
@@ -162,3 +161,52 @@ jobs:
           METRIC_STATUS: ${{ steps.runmeta.outputs.status }}
           METRIC_DURATION_SECONDS: ${{ steps.runmeta.outputs.duration_seconds }}
         run: npm run metrics:push
+
+      # ----------------------------
+      # Slack notify (nightly regression only)
+      # Secrets:
+      #  - SLACK_WEBHOOK_URL
+      #  - GRAFANA_DASHBOARD_PUBLIC_URL (or store as repo variable and change to vars.*)
+      # ----------------------------
+      - name: Notify Slack (nightly regression)
+        if: ${{ always() }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GRAFANA_DASHBOARD_URL: ${{ secrets.GRAFANA_DASHBOARD_PUBLIC_URL }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATUS: ${{ steps.runmeta.outputs.status }}
+          DURATION_SECONDS: ${{ steps.runmeta.outputs.duration_seconds }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "${STATUS}" in
+            success) emoji="✅" ;;
+            failure) emoji="❌" ;;
+            cancelled) emoji="🚫" ;;
+            skipped) emoji="⏭️" ;;
+            timed_out) emoji="⏱️" ;;
+            *) emoji="⚠️" ;;
+          esac
+
+          dur="${DURATION_SECONDS:-0}"
+          mins=$((dur / 60))
+          secs=$((dur % 60))
+          pretty="${mins}m ${secs}s"
+
+          report_hint="Playwright report: open Run → Artifacts → playwright-report-regression-merged"
+
+          payload=$(cat <<EOF
+          {
+            "text": "${emoji} UI Regression Nightly — ${STATUS}\n• Repo: ${REPO}\n• Branch: ${BRANCH}\n• Duration: ${pretty}\n• Run: ${RUN_URL}\n• Grafana: ${GRAFANA_DASHBOARD_URL}\n• ${report_hint}"
+          }
+          EOF
+          )
+
+          curl -sS -X POST -H 'Content-type: application/json' \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL" >/dev/null
+
+          echo "Slack notification sent"
