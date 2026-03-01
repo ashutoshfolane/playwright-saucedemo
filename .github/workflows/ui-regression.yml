@@ -61,7 +61,7 @@ jobs:
           npm run test:regression:shard:blob
 
       - name: Upload blob report (shard)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: ${{ always() }}
         with:
           name: blob-report-${{ matrix.shard_name }}
@@ -93,7 +93,7 @@ jobs:
         run: npm ci
 
       - name: Download blob reports
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: blob-report-*
           path: blob-report
@@ -108,7 +108,7 @@ jobs:
         run: npm run report:merge:html
 
       - name: Upload merged HTML report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: ${{ always() }}
         with:
           name: playwright-report-regression-merged
@@ -121,7 +121,7 @@ jobs:
       - name: Compute run-level metadata (duration/status) from GitHub API
         id: runmeta
         if: ${{ always() }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const run_id = context.runId;

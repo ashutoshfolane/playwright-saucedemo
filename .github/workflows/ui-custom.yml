@@ -160,7 +160,7 @@ jobs:
           echo "Running with --grep \"$PATTERN\""
           npx playwright test --grep "$PATTERN" --project="$PROJECT" --reporter=html
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: ${{ always() }}
         with:
           name: playwright-report-custom-${{ inputs.environment }}-${{ inputs.browser }}
